@@ -1,0 +1,40 @@
+from google.colab import auth
+import gspread
+from google.auth import default
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+from datetime import datetime
+import pytz
+
+auth.authenticate_user()
+local_timezone = pytz.timezone('Asia/Seoul')
+creds, _ = default()
+gc = gspread.authorize(creds)
+worksheet = gc.open('Global Industry Proxy_Trading').get_worksheet(3)
+
+url = 'https://www.dramexchange.com/'
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+}
+response = requests.get(url)
+soup = BeautifulSoup(response.text, 'html.parser')
+
+dram_name_list = soup.find_all('td', class_ = 'tab_title')
+dram1_price = soup.find_all('td', class_='tab_tr_gray')[4].text.strip()
+dram2_price = soup.find_all('td', class_='tab_tr_gray')[16].text.strip()
+
+print(dram1_price) # session_average
+print(dram2_price) # session_average
+
+raw_data = worksheet.get_all_values()
+current_date = datetime.now(local_timezone).date().strftime("%Y-%m-%d")
+cell_list = [current_date, dram1_price, dram2_price]
+
+df = pd.DataFrame(raw_data, columns=raw_data[0]).drop(0)[['Date' ,'DDR4 16Gb (1Gx16)3200' ,'DDR4 8Gb (1Gx8) 3200']]
+if current_date == list(df.Date)[-1]:
+  df.iloc[-1] = cell_list
+else:
+  df.loc[df.shape[0]+1] = cell_list
+
+worksheet.update([df.columns.values.tolist()] + df.values.tolist())  # 컬럼은 컬럼값만, 값들은 이중리스트로 df 변환
