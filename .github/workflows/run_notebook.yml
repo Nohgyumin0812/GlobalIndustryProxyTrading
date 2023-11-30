@@ -1,0 +1,33 @@
+name: Run Colab Notebook
+
+on:
+  schedule:
+    - cron: '1 5 * * *'  # 매일 자정에 실행
+
+jobs:
+  run-colab-notebook:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install Dependencies
+        run: |
+          pip install jupyter nbconvert
+
+      - name: Run Colab Notebook
+        run: |
+          jupyter nbconvert --to notebook --execute global_industry_proxytrading.ipynb
+      - name: Commit and Push Results
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add .
+          git commit -m "Run Colab Notebook"
+          git push
